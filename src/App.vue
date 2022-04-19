@@ -1,19 +1,30 @@
 <template>
-  <div class="body">
-    <div class="col-md-3 p-5">
-      <Nav
-        @enviarNumero="obtenerPokemonsById"
-        @enviarName="obtenerPokemonByName"
-      />
-    </div>
-    <div class="col-md-9 p-5">
-      <Card />
+  <div class="body p-3">
+    <div class="row">
+      <div class="col-md-2 p-3">
+        <Nav
+          v-on:enviarNumero="obtenerPokemonsById"
+          v-on:enviarName="obtenerPokemonByName"
+          v-on:primeros="obtenerPokemons(urlprim)"
+          v-on:siguientes="obtenerSiguiente"
+          v-on:anterior="obtenerAnterior"
+        />
+      </div>
+      <div class="col-md-10">
+        <div class="row">
+          <Card
+            v-for="(poke, index) in pokeResultado"
+            :key="index"
+            :poke="poke"
+          />
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script>
-import { provide, ref } from "@vue/runtime-core";
+import { ref, watchEffect } from "@vue/runtime-core";
 import Nav from "./components/Nav.vue";
 import Card from "./components/Card.vue";
 
@@ -21,44 +32,100 @@ export default {
   name: "App",
   components: {
     Nav,
-    Card
+    Card,
   },
   setup() {
-    let pokemonById = ref({});
-    let pokemonByName = ref({});
+    const pokeResultado = ref([]),
+      pokepoke = ref({
+        url: "",
+      }),
+      urlprim = "https://pokeapi.co/api/v2/pokemon/",
+      url = ref(urlprim),
+      urlSig = ref(""),
+      urlPrev = ref("");
+
+    const obtenerPokemons = async (url) => {
+      try {
+        pokeResultado.value = [];
+        const res = await fetch(url);
+        const data = await res.json();
+        if ((await data.next) != null) {
+          urlSig.value = await data.next;
+        } else {
+          urlSig.value = url;
+        }
+        if ((await data.previous) != null) {
+          urlPrev.value = await data.previous;
+        } else {
+          urlPrev.value = url;
+        }
+        console.log(urlSig);
+        pokeResultado.value = await data.results;
+        console.log(pokeResultado.value);
+      } catch (error) {
+        console.log(error);
+      }
+    };
+
+    const obtenerSiguiente = () => {
+      url.value = urlSig.value;
+      obtenerPokemons(url.value);
+    };
+
+    const obtenerAnterior = () => {
+      url.value = urlPrev.value;
+      obtenerPokemons(url.value);
+    };
 
     const obtenerPokemonsById = async (id) => {
       try {
-        const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
+        pokeResultado.value = [];
+        const url = `https://pokeapi.co/api/v2/pokemon/${id}`;
+        const res = await fetch(url);
         const data = await res.json();
-        pokemonById.value = await data;
+        pokepoke.value.url = url;
+        pokeResultado.value.push(pokepoke.value);
         console.log(data);
       } catch (error) {
         console.log(error);
       }
     };
+
     const obtenerPokemonByName = async (name) => {
       try {
-        const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${name}`);
+        pokeResultado.value = [];
+        const url = `https://pokeapi.co/api/v2/pokemon/${name}`;
+        const res = await fetch(url);
         const data = await res.json();
-        pokemonByName.value = await data;
+        pokepoke.value.url = url;
+        pokeResultado.value.push(pokepoke.value);
         console.log(data);
       } catch (error) {
         console.log(error);
       }
     };
 
-    obtenerPokemonsById(1);
-    obtenerPokemonByName("bulbasaur");
+    obtenerPokemons(url.value);
 
-    provide("pokemonByName", pokemonByName);
-    provide("pokemonById", pokemonById);
-    
+    watchEffect(() => {
+      console.log(pokeResultado);
+    });
+
+    // console.log("hola");
+    // console.log(pokeResultado);
+
+
     return {
-      obtenerPokemonsById,
+      url,
+      urlprim,
+      urlSig,
+      urlPrev,
+      obtenerPokemons,
+      obtenerSiguiente,
+      obtenerAnterior,
+      pokeResultado,
       obtenerPokemonByName,
-      pokemonById,
-      pokemonByName,
+      obtenerPokemonsById,
     };
   },
 };
@@ -66,41 +133,17 @@ export default {
 
 <style>
 .body {
-  height: 100vh;
+  /* height: 100vh; */
   display: flex;
   justify-content: center;
-  align-items: center;
-  background: rgb(190, 190, 190);
+  /* align-items: center; */
+  background: rgb(163, 233, 161);
   background: linear-gradient(
-    137deg,
-    rgba(190, 190, 190, 1) 0%,
-    rgba(133, 181, 152, 1) 100%
+    90deg,
+    rgba(163, 233, 161, 1) 0%,
+    rgba(0, 0, 0, 0.9051995798319328) 0%,
+    rgba(0, 0, 0, 0.5214460784313726) 100%
   );
-}
-.principal {
-  border-color: 5px solid red;
-}
-.cardd {
-  background-color: rgb(217, 243, 243);
-  padding: 50px;
-  border-radius: 30px 30px 0 0;
-}
-.name {
-  font-size: 50px;
-}
-.pokeImg {
-  height: 400px;
-  width: 400px;
-}
-.datos {
-  background-color: rgb(175, 235, 235);
-  padding: 30px;
-  border-radius: 0 0 30px 30px;
-  display: flex;
-  justify-content: space-between;
-  height: 180px;
-}
-.tipo {
-  width: 50%;
+  color: white;
 }
 </style>
